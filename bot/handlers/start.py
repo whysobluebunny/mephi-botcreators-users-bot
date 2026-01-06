@@ -1,12 +1,21 @@
+import logging
+
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
 
 router = Router()
+log = logging.getLogger(__name__)
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
+    log.info(
+        "cmd=/start user_id=%s chat_id=%s username=%s",
+        message.from_user.id if message.from_user else None,
+        message.chat.id if message.chat else None,
+        message.from_user.username if message.from_user else None,
+    )
     text = (
         "Привет! 👋\n\n"
         "Я бот для анализа экспортов чатов Telegram.\n\n"
@@ -23,6 +32,11 @@ async def cmd_start(message: Message) -> None:
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
+    log.info(
+        "cmd=/help user_id=%s chat_id=%s",
+        message.from_user.id if message.from_user else None,
+        message.chat.id if message.chat else None,
+    )
     text = (
         "Как пользоваться ботом:\n\n"
         "1️⃣ Открой Telegram Desktop и экспортируй историю нужного чата.\n"
