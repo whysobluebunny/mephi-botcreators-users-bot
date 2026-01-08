@@ -37,8 +37,8 @@ class TestHandleDocument:
     @pytest.mark.asyncio
     async def test_handle_document_success_html(self, message, document_html, fsm_context):
         """Тест успешной обработки HTML файла."""
-        message.document = document_html
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_html)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -50,8 +50,8 @@ class TestHandleDocument:
     @pytest.mark.asyncio
     async def test_handle_document_success_zip(self, message, document_zip, fsm_context):
         """Тест успешной обработки ZIP файла."""
-        message.document = document_zip
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_zip)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -64,13 +64,13 @@ class TestHandleDocument:
     async def test_handle_document_multiple_files(self, message, document_json, document_html, fsm_context):
         """Тест обработки нескольких файлов подряд."""
         # Первый файл
-        message.document = document_json
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_json)
+        object.__setattr__(message, 'answer', AsyncMock())
         await handle_document(message, fsm_context)
 
         # Второй файл
-        message.document = document_html
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_html)
+        object.__setattr__(message, 'answer', AsyncMock())
         await handle_document(message, fsm_context)
 
         # Проверяем, что оба файла сохранены
@@ -86,8 +86,8 @@ class TestHandleDocument:
     @pytest.mark.asyncio
     async def test_handle_document_file_too_large(self, message, document_large, fsm_context):
         """Тест отклонения файла из-за превышения размера."""
-        message.document = document_large
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_large)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -105,8 +105,8 @@ class TestHandleDocument:
     @pytest.mark.asyncio
     async def test_handle_document_invalid_extension(self, message, document_invalid_extension, fsm_context):
         """Тест отклонения файла с неподдерживаемым расширением."""
-        message.document = document_invalid_extension
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_invalid_extension)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -132,8 +132,8 @@ class TestHandleDocument:
             file_name="export.JSON",  # Верхний регистр
             file_size=1024,
         )
-        message.document = document
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -150,8 +150,8 @@ class TestHandleDocument:
             file_name="export.json",
             file_size=None,  # Размер не указан
         )
-        message.document = document
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -168,8 +168,8 @@ class TestHandleDocument:
             file_name=None,  # Имя не указано
             file_size=1024,
         )
-        message.document = document
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document)
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await handle_document(message, fsm_context)
 
@@ -189,8 +189,8 @@ class TestHandleDocument:
         await fsm_context.set_state(UploadState.waiting_files)
         await fsm_context.update_data(files=[])
 
-        message.document = document_json
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'document', document_json)
+        object.__setattr__(message, 'answer', AsyncMock())
         await handle_document(message, fsm_context)
 
         # Проверяем, что состояние сохранилось
@@ -211,7 +211,7 @@ class TestCmdReset:
         await fsm_context.set_state(UploadState.waiting_files)
         await fsm_context.update_data(files=[{"file_id": "test"}])
 
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'answer', AsyncMock())
 
         # Вызываем команду
         await cmd_reset(message, fsm_context)
@@ -232,7 +232,7 @@ class TestCmdReset:
     @pytest.mark.asyncio
     async def test_cmd_reset_empty_state(self, message, fsm_context):
         """Тест /reset при пустом состоянии."""
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await cmd_reset(message, fsm_context)
 
@@ -252,7 +252,7 @@ class TestCmdReset:
             {"file_id": "file3"},
         ])
 
-        message.answer = AsyncMock()
+        object.__setattr__(message, 'answer', AsyncMock())
 
         await cmd_reset(message, fsm_context)
 

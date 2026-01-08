@@ -39,7 +39,7 @@ async def handle_document(message: Message, state: FSMContext) -> None:
             message.from_user.id if message.from_user else None,
             document.file_name,
             document.file_size,
-            settings.max_file_size_bytes,
+            MAX_FILE_SIZE,
         )
         await message.answer(
             f"❌ Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE / (1024 * 1024):.0f} MB"
