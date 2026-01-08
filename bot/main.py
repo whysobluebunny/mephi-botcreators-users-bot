@@ -4,12 +4,14 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from bot.logging_utils import setup_logging
 from .config import get_settings
-from .handlers import start, files
+from .handlers import start, files, status
 
 
 async def main() -> None:
     settings = get_settings()
+    setup_logging(settings)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -22,6 +24,7 @@ async def main() -> None:
     # Подключаем роутеры
     dp.include_router(start.router)
     dp.include_router(files.router)
+    dp.include_router(status.router)
 
     logging.info("Starting bot polling...")
     await dp.start_polling(bot)
