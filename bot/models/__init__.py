@@ -1,3 +1,3 @@
-from .export_result import ExportParseResult, FinalResult
+from .export_result import ExportParseResult
 
-__all__ = ["ExportParseResult", "FinalResult"]
+__all__ = ["ExportParseResult"]
