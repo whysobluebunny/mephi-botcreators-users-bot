@@ -68,51 +68,64 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
             
             result = aggregator.parse_exports([str(p) for p in file_paths])
             mentions_count = len(result.mentioned_usernames)
+            names_count = len(result.chat_names)
             
             log.info(
-                "event=parsing_ok user_id=%s mentions_found=%d",
+                "event=parsing_ok user_id=%s mentions_found=%d names_found=%d",
                 message.from_user.id if message.from_user else None,
                 mentions_count,
+                names_count,
             )
             
-            if mentions_count < 50:
-                # Отправляем текстом
-                if not result.mentioned_usernames:
-                     text = "Результат: Упомянутых пользователей (тегов) не найдено."
-                else:
-                    # Оформляем список
-                    # Ограничение Telegram на длину сообщения ~4096 символов.
-                    # Если usernames длинные, может не влезть, но < 50 обычно влезает (50 * ~15 = 750 символов)
-                    text_list = "\n".join([f"@{u}" for u in result.mentioned_usernames])
-                    text = f"📊 Найдено {mentions_count} пользователей:\n\n{text_list}"
+            if mentions_count < 50 or names_count < 50:
+                # Отправляем @username
+                if result.mentioned_usernames:
+                    text_list = "\n".join([f"@{u}" for u in sorted(result.mentioned_usernames)])
+                    text = f"📌 Найдено {mentions_count} @username:\n\n{text_list}"
+                    await message.answer(text)
+                    
+                    log.info(
+                        "event=usernames_sent user_id=%s count=%d",
+                        message.from_user.id if message.from_user else None,
+                        mentions_count,
+                    )
                 
-                await message.answer(text)
+                # Отправляем имена отдельно
+                if result.chat_names:
+                    names_list = "\n".join([f"• {name}" for name in sorted(result.chat_names)])
+                    text = f"👤 Найдено {names_count} имён пользователей:\n\n{names_list}"
+                    await message.answer(text)
+                    
+                    log.info(
+                        "event=names_sent user_id=%s count=%d",
+                        message.from_user.id if message.from_user else None,
+                        names_count,
+                    )
                 
-                log.info(
-                    "event=text_sent user_id=%s",
-                    message.from_user.id if message.from_user else None,
-                )
+                # Если ничего не найдено
+                if not result.mentioned_usernames and not result.chat_names:
+                    text = "Результат: Упомянутых пользователей и имён не найдено."
+                    await message.answer(text)
             else:
-                # Генерируем Excel
                 exporter = ExcelExporter()
                 excel_filename = f"mentions_{message.from_user.id}.xlsx"
                 excel_path = temp_path / excel_filename
-                
+
                 exporter.build_excel(result, excel_path)
-                
+
                 log.info(
                     "event=excel_generated user_id=%s path=%s",
                     message.from_user.id if message.from_user else None,
                     str(excel_path),
                 )
-                
+
                 # Отправляем файл
                 input_file = FSInputFile(excel_path)
                 await message.answer_document(
-                    input_file, 
+                    input_file,
                     caption=f"📊 Найдено {mentions_count} пользователей. Список во вложении."
                 )
-                
+
                 log.info(
                     "event=excel_sent user_id=%s",
                     message.from_user.id if message.from_user else None,

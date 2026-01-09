@@ -13,13 +13,28 @@ class Parser(Protocol):
 
 
 class Aggregator:
-    def __init__(self, parsers: list[Parser]):
-        self.parsers = parsers
+    def __init__(self, parsers: list[Parser] | None = None):
+        if parsers is None:
+            # Инициализируем парсеры по умолчанию
+            from .parser.telegram_json_parser import TelegramJsonParser
+            self.parsers = [TelegramJsonParser(bot=None)]
+        else:
+            self.parsers = parsers
     
     def _select_parser(self, path: Path) -> Parser | None:
         extension = path.suffix.lower()
         
         for parser in self.parsers:
+            # Пытаемся использовать can_handle (новый способ)
+            if hasattr(parser, "can_handle"):
+                try:
+                    if parser.can_handle(path):
+                        return parser
+                except Exception as e:
+                    logger.debug(f"Ошибка при вызове can_handle для {parser}: {e}")
+                    continue
+            
+            # Старый способ для совместимости
             if hasattr(parser, "can_parse"):
                 try:
                     if parser.can_parse(path):
@@ -36,8 +51,13 @@ class Aggregator:
     
     def parse_exports(self, paths: Iterable[Path]) -> ExportParseResult:
         all_usernames: set[str] = set()
+        all_names: set[str] = set()
         
         for path in paths:
+            # Конвертируем строку в Path если необходимо
+            if isinstance(path, str):
+                path = Path(path)
+            
             parser = self._select_parser(path)
             
             if parser is None:
@@ -50,9 +70,10 @@ class Aggregator:
             try:
                 result = parser.parse(path)
                 all_usernames.update(result.mentioned_usernames)
+                all_names.update(result.chat_names)
                 logger.info(
                     f"Успешно обработан файл {path.name}: "
-                    f"найдено {len(result.mentioned_usernames)} username"
+                    f"найдено {len(result.mentioned_usernames)} usernames, {len(result.chat_names)} names"
                 )
             except Exception as e:
                 logger.error(
@@ -61,6 +82,4 @@ class Aggregator:
                 )
                 continue
         
-        sorted_usernames = sorted(all_usernames)
-        
-        return ExportParseResult(mentioned_usernames=sorted_usernames)
+        return ExportParseResult(mentioned_usernames=all_usernames, chat_names=all_names)

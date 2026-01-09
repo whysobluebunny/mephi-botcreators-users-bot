@@ -46,7 +46,7 @@ async def test_process_files_text_response(message, fsm_context):
         
         # Mock Aggregator
         agg_instance = MockAggregator.return_value
-        agg_instance.parse_exports.return_value = FinalResult(mentioned_usernames=["user1", "user2"])
+        agg_instance.parse_exports.return_value = FinalResult(usernames=["user1", "user2"], names=[])
         
         await process_files(message, fsm_context)
         
@@ -83,7 +83,7 @@ async def test_process_files_excel_response(message, fsm_context):
         mock_download.return_value = ["/tmp/test/test.json"]
         
         agg_instance = MockAggregator.return_value
-        agg_instance.parse_exports.return_value = FinalResult(mentioned_usernames=users)
+        agg_instance.parse_exports.return_value = FinalResult(usernames=users, names=[])
         
         await process_files(message, fsm_context)
         
