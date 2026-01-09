@@ -4,11 +4,11 @@ from typing import Set
 
 class ExportParseResult(BaseModel):
     # @username из текста сообщений (@testuser, @john_doe и т.д.)
-    usernames: Set[str] = set()
+    mentioned_usernames: Set[str] = set()
     # Проверенные @username (существуют в Telegram)
     verified_usernames: Set[str] = set()
     # Имена из полей 'from', 'forwarded_from' и т.д. (Иван, Лев, Artyom и т.д.)
-    names: Set[str] = set()
+    char_usernames: Set[str] = set()
 
 
 class FinalResult(BaseModel):
