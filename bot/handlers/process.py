@@ -67,8 +67,8 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
             )
             
             result = aggregator.parse_exports([str(p) for p in file_paths])
-            mentions_count = len(result.usernames)
-            names_count = len(result.names)
+            mentions_count = len(result.mentioned_usernames)
+            names_count = len(result.chat_names)
             
             log.info(
                 "event=parsing_ok user_id=%s mentions_found=%d names_found=%d",
@@ -79,8 +79,8 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
             
             if mentions_count < 50 or names_count < 50:
                 # Отправляем @username
-                if result.usernames:
-                    text_list = "\n".join([f"@{u}" for u in sorted(result.usernames)])
+                if result.mentioned_usernames:
+                    text_list = "\n".join([f"@{u}" for u in sorted(result.mentioned_usernames)])
                     text = f"📌 Найдено {mentions_count} @username:\n\n{text_list}"
                     await message.answer(text)
                     
@@ -91,8 +91,8 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
                     )
                 
                 # Отправляем имена отдельно
-                if result.names:
-                    names_list = "\n".join([f"• {name}" for name in sorted(result.names)])
+                if result.chat_names:
+                    names_list = "\n".join([f"• {name}" for name in sorted(result.chat_names)])
                     text = f"👤 Найдено {names_count} имён пользователей:\n\n{names_list}"
                     await message.answer(text)
                     
@@ -103,7 +103,7 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
                     )
                 
                 # Если ничего не найдено
-                if not result.usernames and not result.names:
+                if not result.mentioned_usernames and not result.chat_names:
                     text = "Результат: Упомянутых пользователей и имён не найдено."
                     await message.answer(text)
             else:

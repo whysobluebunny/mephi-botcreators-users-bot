@@ -69,11 +69,11 @@ class Aggregator:
             
             try:
                 result = parser.parse(path)
-                all_usernames.update(result.usernames)
-                all_names.update(result.names)
+                all_usernames.update(result.mentioned_usernames)
+                all_names.update(result.chat_names)
                 logger.info(
                     f"Успешно обработан файл {path.name}: "
-                    f"найдено {len(result.usernames)} usernames, {len(result.names)} names"
+                    f"найдено {len(result.mentioned_usernames)} usernames, {len(result.chat_names)} names"
                 )
             except Exception as e:
                 logger.error(
@@ -82,4 +82,4 @@ class Aggregator:
                 )
                 continue
         
-        return ExportParseResult(usernames=all_usernames, names=all_names)
+        return ExportParseResult(mentioned_usernames=all_usernames, chat_names=all_names)

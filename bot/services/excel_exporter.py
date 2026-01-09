@@ -17,7 +17,7 @@ class ExcelExporter:
         for username in result.mentioned_usernames:
             sheet_mentions.append([export_date, username])
 
-        for display_name in result.char_usernames:
+        for display_name in result.chat_names:
             sheet_display_names.append([export_date, display_name])
 
         sheet_mentions.column_dimensions['A'].width = 20

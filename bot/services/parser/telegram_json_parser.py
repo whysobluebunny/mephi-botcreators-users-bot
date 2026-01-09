@@ -67,7 +67,7 @@ class TelegramJsonParser(ChatExportParser):
                     # Исключаем @user<числа> (ID вместо username)
                     if not USER_ID_RE.match(mention.lower()):
                         # Сохраняем в lowercase для единообразия
-                        result.usernames.add(mention.lower())
+                        result.mentioned_usernames.add(mention.lower())
             
             # Извлекаем имена из полей "from", "forwarded_from" и т.д.
             self._extract_names_from_message(msg, result)
@@ -76,7 +76,7 @@ class TelegramJsonParser(ChatExportParser):
             "Parsed %d messages from %s, found %d unique usernames",
             len(messages),
             path.name,
-            len(result.usernames),
+            len(result.mentioned_usernames),
         )
 
         # Если есть бот, проверяем существование пользователей
@@ -92,7 +92,7 @@ class TelegramJsonParser(ChatExportParser):
                 asyncio.run(self._verify_usernames(result))
         else:
             # Если нет бота, копируем все найденные usernames в verified
-            result.verified_usernames = result.usernames.copy()
+            result.verified_usernames = result.mentioned_usernames.copy()
             log.debug("No bot instance provided, verified_usernames = usernames")
 
         return result
@@ -101,7 +101,7 @@ class TelegramJsonParser(ChatExportParser):
         """
         Проверяет существование пользователей через Telegram API.
         """
-        for username in result.usernames:
+        for username in result.mentioned_usernames:
             try:
                 # Пытаемся получить информацию о пользователе
                 user = await self.bot.get_chat(f"@{username}")
@@ -114,7 +114,7 @@ class TelegramJsonParser(ChatExportParser):
         log.info(
             "Verified %d out of %d usernames",
             len(result.verified_usernames),
-            len(result.usernames),
+            len(result.mentioned_usernames),
         )
 
     def _extract_text_from_message(self, msg: dict[str, Any]) -> str:
@@ -174,5 +174,5 @@ class TelegramJsonParser(ChatExportParser):
                     continue
                 
                 # Добавляем имя в отдельный список
-                result.names.add(name)
+                result.chat_names.add(name)
                 log.debug(f"Извлечено имя из поля '{field}': {name}")

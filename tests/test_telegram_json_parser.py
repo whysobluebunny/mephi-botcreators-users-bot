@@ -110,8 +110,8 @@ def test_parse_simple_message(parser, sample_telegram_export):
         result = parser.parse(json_path)
         
         assert isinstance(result, ExportParseResult)
-        assert "testuser" in result.usernames
-        assert "valid_user" in result.usernames
+        assert "testuser" in result.mentioned_usernames
+        assert "valid_user" in result.mentioned_usernames
 
 
 def test_parse_array_messages(parser, sample_telegram_export):
@@ -123,8 +123,8 @@ def test_parse_array_messages(parser, sample_telegram_export):
         
         result = parser.parse(json_path)
         
-        assert "username1" in result.usernames
-        assert "username2" in result.usernames
+        assert "username1" in result.mentioned_usernames
+        assert "username2" in result.mentioned_usernames
 
 
 def test_parse_complex_objects(parser, sample_telegram_export):
@@ -136,8 +136,8 @@ def test_parse_complex_objects(parser, sample_telegram_export):
         
         result = parser.parse(json_path)
         
-        assert "another_user" in result.usernames
-        assert "yet_another" in result.usernames
+        assert "another_user" in result.mentioned_usernames
+        assert "yet_another" in result.mentioned_usernames
 
 
 def test_parse_skips_empty_messages(parser, sample_telegram_export):
@@ -163,8 +163,8 @@ def test_parse_invalid_usernames(parser, sample_telegram_export):
         result = parser.parse(json_path)
         
         # Короткие имена (@test, @u) не должны быть включены
-        assert "test" not in result.usernames
-        assert "u" not in result.usernames
+        assert "test" not in result.mentioned_usernames
+        assert "u" not in result.mentioned_usernames
 
 
 def test_parse_lowercase_normalization(parser, sample_telegram_export):
@@ -188,10 +188,10 @@ def test_parse_lowercase_normalization(parser, sample_telegram_export):
         
         result = parser.parse(json_path)
         
-        assert "testuser" in result.usernames
-        assert "another_user" in result.usernames
+        assert "testuser" in result.mentioned_usernames
+        assert "another_user" in result.mentioned_usernames
         # Исходные версии не должны быть добавлены отдельно
-        assert "TestUser" not in result.usernames
+        assert "TestUser" not in result.mentioned_usernames
 
 
 def test_parse_invalid_json(parser):
@@ -204,7 +204,7 @@ def test_parse_invalid_json(parser):
         result = parser.parse(json_path)
         
         assert isinstance(result, ExportParseResult)
-        assert len(result.usernames) == 0
+        assert len(result.mentioned_usernames) == 0
 
 
 def test_parse_missing_messages_field(parser):
@@ -219,7 +219,7 @@ def test_parse_missing_messages_field(parser):
         result = parser.parse(json_path)
         
         assert isinstance(result, ExportParseResult)
-        assert len(result.usernames) == 0
+        assert len(result.mentioned_usernames) == 0
 
 
 def test_parse_messages_not_list(parser):
@@ -234,7 +234,7 @@ def test_parse_messages_not_list(parser):
         result = parser.parse(json_path)
         
         assert isinstance(result, ExportParseResult)
-        assert len(result.usernames) == 0
+        assert len(result.mentioned_usernames) == 0
 
 
 def test_parse_file_not_found(parser):
@@ -244,7 +244,7 @@ def test_parse_file_not_found(parser):
     result = parser.parse(non_existent)
     
     assert isinstance(result, ExportParseResult)
-    assert len(result.usernames) == 0
+    assert len(result.mentioned_usernames) == 0
 
 
 def test_parser_without_bot_copies_to_verified(parser, sample_telegram_export):
@@ -256,7 +256,7 @@ def test_parser_without_bot_copies_to_verified(parser, sample_telegram_export):
         
         result = parser.parse(json_path)
         
-        assert result.verified_usernames == result.usernames
+        assert result.verified_usernames == result.mentioned_usernames
         assert len(result.verified_usernames) > 0
 
 
@@ -294,8 +294,8 @@ def test_parser_with_bot_verifies_users():
         result = parser.parse(json_path)
         
         # Проверяем, что найдены оба пользователя в usernames
-        assert "testuser" in result.usernames
-        assert "other_user" in result.usernames
+        assert "testuser" in result.mentioned_usernames
+        assert "other_user" in result.mentioned_usernames
 
 
 def test_multiple_mentions_same_user(parser, sample_telegram_export):
@@ -319,8 +319,8 @@ def test_multiple_mentions_same_user(parser, sample_telegram_export):
         
         result = parser.parse(json_path)
         
-        assert result.usernames == {"testuser"}
-        assert len(result.usernames) == 1
+        assert result.mentioned_usernames == {"testuser"}
+        assert len(result.mentioned_usernames) == 1
 
 
 def test_parse_mixed_content(parser):
@@ -359,13 +359,13 @@ def test_parse_mixed_content(parser):
         
         result = parser.parse(json_path)
         
-        assert "user1" in result.usernames
-        assert "user2" in result.usernames
-        assert "user3" in result.usernames
-        assert "user4" in result.usernames
-        assert "user5" in result.usernames
+        assert "user1" in result.mentioned_usernames
+        assert "user2" in result.mentioned_usernames
+        assert "user3" in result.mentioned_usernames
+        assert "user4" in result.mentioned_usernames
+        assert "user5" in result.mentioned_usernames
         # Должно быть 5 пользователей, user3@example.com не считается
-        assert len(result.usernames) == 5
+        assert len(result.mentioned_usernames) == 5
 
 
 def test_extract_names_from_from_field(parser):
@@ -397,8 +397,8 @@ def test_extract_names_from_from_field(parser):
         
         result = parser.parse(json_path)
         
-        assert "Лев" in result.names
-        assert "Artyom" in result.names
+        assert "Лев" in result.chat_names
+        assert "Artyom" in result.chat_names
 
 
 def test_skip_user_ids_from_from_field(parser):
@@ -431,9 +431,9 @@ def test_skip_user_ids_from_from_field(parser):
         result = parser.parse(json_path)
         
         # user710927765 НЕ должно быть добавлено в names
-        assert "user710927765" not in result.names
+        assert "user710927765" not in result.chat_names
         # Den должно быть добавлено
-        assert "Den" in result.names
+        assert "Den" in result.chat_names
 
 
 def test_extract_forwarded_from(parser):
@@ -459,8 +459,8 @@ def test_extract_forwarded_from(parser):
         
         result = parser.parse(json_path)
         
-        assert "Alice" in result.names
-        assert "Bob" in result.names
+        assert "Alice" in result.chat_names
+        assert "Bob" in result.chat_names
 
 
 def test_mentions_and_names_combined(parser):
@@ -486,11 +486,11 @@ def test_mentions_and_names_combined(parser):
         result = parser.parse(json_path)
         
         # Имя должно быть в names
-        assert "Иван" in result.names
+        assert "Иван" in result.chat_names
         # @mentions должны быть в usernames
-        assert "testuser" in result.usernames
-        assert "another_user" in result.usernames
+        assert "testuser" in result.mentioned_usernames
+        assert "another_user" in result.mentioned_usernames
         # В names не должны быть mentions
-        assert "testuser" not in result.names
-        assert len(result.names) == 1
-        assert len(result.usernames) == 2
+        assert "testuser" not in result.chat_names
+        assert len(result.chat_names) == 1
+        assert len(result.mentioned_usernames) == 2

@@ -34,12 +34,12 @@ def test_aggregator_with_telegram_parser():
         result = aggregator.parse_exports([json_file])
         
         # Проверяем результаты
-        assert "testuser1" in result.usernames
-        assert "testuser2" in result.usernames
-        assert "testuser3" in result.usernames
-        assert len(result.usernames) == 3
+        assert "testuser1" in result.mentioned_usernames
+        assert "testuser2" in result.mentioned_usernames
+        assert "testuser3" in result.mentioned_usernames
+        assert len(result.mentioned_usernames) == 3
         
-        print(f"✅ Найдено {len(result.usernames)} пользователей: {result.usernames}")
+        print(f"✅ Найдено {len(result.mentioned_usernames)} пользователей: {result.mentioned_usernames}")
 
 
 def test_aggregator_with_string_paths():
@@ -62,8 +62,8 @@ def test_aggregator_with_string_paths():
         # Передаем строку вместо Path
         result = aggregator.parse_exports([str(json_file)])
         
-        assert "user_one" in result.usernames
-        assert "user_two" in result.usernames
+        assert "user_one" in result.mentioned_usernames
+        assert "user_two" in result.mentioned_usernames
         
         print(f"✅ Aggregator корректно работает со строковыми путями")
 
