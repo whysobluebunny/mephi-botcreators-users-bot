@@ -1,5 +1,139 @@
+import time
 import logging
+import tempfile
+from pathlib import Path
+from aiogram import Router, types
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import FSInputFile
 
+from bot.states import UploadState
+from bot.services.file_downloader import download_files
+from bot.services.aggregator import Aggregator
+from bot.services.excel_exporter import ExcelExporter
+
+router = Router()
 log = logging.getLogger(__name__)
 
-# todo implement
+@router.message(Command("process"))
+async def process_files(message: types.Message, state: FSMContext) -> None:
+    t0 = time.monotonic()
+    
+    log.info(
+        "cmd=/process user_id=%s chat_id=%s",
+        message.from_user.id if message.from_user else None,
+        message.chat.id if message.chat else None,
+    )
+
+    data = await state.get_data()
+    files = data.get("files", [])
+    
+    log.info(
+        "event=process_started user_id=%s files_count=%s",
+        message.from_user.id if message.from_user else None,
+        len(files),
+    )
+
+    if not files:
+        log.warning(
+            "event=process_aborted reason=no_files user_id=%s",
+            message.from_user.id if message.from_user else None,
+        )
+        await message.answer("⚠️ Нет файлов для обработки. Загрузите их сначала (отправьте JSON файлы).")
+        return
+
+    status_msg = await message.answer("⏳ Начинаю обработку файлов...")
+
+    try:
+        # Создаем временную директорию
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Скачиваем файлы (логирование внутри)
+            file_paths = await download_files(
+                message.bot, 
+                files, 
+                temp_path, 
+                user_id=message.from_user.id if message.from_user else None
+            )
+            
+            # Агрегируем данные
+            aggregator = Aggregator()
+            
+            log.info(
+                "event=parsing_start user_id=%s files_count=%s",
+                message.from_user.id if message.from_user else None,
+                len(file_paths),
+            )
+            
+            result = aggregator.parse_exports([str(p) for p in file_paths])
+            mentions_count = len(result.mentioned_usernames)
+            
+            log.info(
+                "event=parsing_ok user_id=%s mentions_found=%d",
+                message.from_user.id if message.from_user else None,
+                mentions_count,
+            )
+            
+            if mentions_count < 50:
+                # Отправляем текстом
+                if not result.mentioned_usernames:
+                     text = "Результат: Упомянутых пользователей (тегов) не найдено."
+                else:
+                    # Оформляем список
+                    # Ограничение Telegram на длину сообщения ~4096 символов.
+                    # Если usernames длинные, может не влезть, но < 50 обычно влезает (50 * ~15 = 750 символов)
+                    text_list = "\n".join([f"@{u}" for u in result.mentioned_usernames])
+                    text = f"📊 Найдено {mentions_count} пользователей:\n\n{text_list}"
+                
+                await message.answer(text)
+                
+                log.info(
+                    "event=text_sent user_id=%s",
+                    message.from_user.id if message.from_user else None,
+                )
+            else:
+                # Генерируем Excel
+                exporter = ExcelExporter()
+                excel_filename = f"mentions_{message.from_user.id}.xlsx"
+                excel_path = temp_path / excel_filename
+                
+                exporter.build_excel(result, excel_path)
+                
+                log.info(
+                    "event=excel_generated user_id=%s path=%s",
+                    message.from_user.id if message.from_user else None,
+                    str(excel_path),
+                )
+                
+                # Отправляем файл
+                input_file = FSInputFile(excel_path)
+                await message.answer_document(
+                    input_file, 
+                    caption=f"📊 Найдено {mentions_count} пользователей. Список во вложении."
+                )
+                
+                log.info(
+                    "event=excel_sent user_id=%s",
+                    message.from_user.id if message.from_user else None,
+                )
+        
+        # Очищаем состояние
+        await state.clear()
+        
+        log.info(
+            "event=process_finished user_id=%s elapsed_ms=%d",
+            message.from_user.id if message.from_user else None,
+            int((time.monotonic() - t0) * 1000),
+        )
+        
+        # Удаляем сообщение со статусом
+        await status_msg.delete()
+        
+    except Exception as e:
+        log.exception(
+            "event=process_failed user_id=%s error=%s",
+            message.from_user.id if message.from_user else None,
+            str(e)
+        )
+        await message.answer(f"❌ Произошла ошибка при обработке: {e}")

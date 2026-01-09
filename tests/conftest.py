@@ -1,8 +1,10 @@
 import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from aiogram.types import Message, User, Chat, Document
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.base import StorageKey
 
 from bot.states import UploadState
 
@@ -20,7 +22,7 @@ def fsm_context(memory_storage):
     bot = Bot(token="123:ABC")
     return FSMContext(
         storage=memory_storage,
-        key=FSMContext.key(bot=bot, user_id=123, chat_id=123)
+        key=StorageKey(bot_id=bot.id, user_id=123, chat_id=123)
     )
 
 
@@ -46,11 +48,11 @@ def message(user, chat):
     """Базовая фикстура для сообщения."""
     msg = Message(
         message_id=1,
-        date=None,
+        date=datetime.now(),
         chat=chat,
         from_user=user
     )
-    msg.answer = AsyncMock()
+    object.__setattr__(msg, 'answer', AsyncMock())
     return msg
 
 
@@ -112,6 +114,6 @@ def document_invalid_extension():
 @pytest.fixture
 def message_with_document(message, document_json):
     """Сообщение с документом."""
-    message.document = document_json
+    object.__setattr__(message, 'document', document_json)
     return message
 
