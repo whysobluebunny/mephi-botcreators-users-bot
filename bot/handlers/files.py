@@ -13,7 +13,7 @@ from ..config import get_settings
 router = Router()
 log = logging.getLogger(__name__)
 settings = get_settings()
-ALLOWED_EXTENSIONS = {".json", ".html", ".zip"}
+ALLOWED_EXTENSIONS = {".json"}
 
 
 @router.message(F.document)
