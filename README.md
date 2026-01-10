@@ -178,3 +178,10 @@ docker compose up --build
 
 Сервис `bot` возьмёт переменные из `.env` и будет перезапускаться автоматически.
 
+# Архитектура
+### Общая компонентная схема (handlers → services → парсеры, временные файлы, взаимодействие с Telegram Bot API).
+![architecture.png](docs%2Farchitecture.png)
+### Последовательность обработки: загрузка документа → накопление очереди → `/process` → скачивание → парсинг → ответ/Excel.
+![sequence_processing.png](docs%2Fsequence_processing.png)
+### Упрощённая схема развёртывания (Docker/Host ↔ Telegram Cloud).
+![deployment.png](docs%2Fdeployment.png)
