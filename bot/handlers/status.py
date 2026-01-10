@@ -4,8 +4,8 @@ import logging
 import os
 
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
 
 from ..version import APP_VERSION
 
@@ -29,6 +29,6 @@ async def cmd_status(message: Message) -> None:
         "Функциональность:\n"
         "• /start, /help — ✅\n"
         "• Приём файлов экспорта — ✅\n"
-        "• Обработка экспортов и выгрузка результата — 🚧 (в разработке)"  # todo
+        "• Обработка экспортов и выгрузка результата — ✅"
     )
     await message.answer(text)

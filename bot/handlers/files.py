@@ -1,22 +1,23 @@
 import logging
 
 from aiogram import Router, F
-from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 
+from .process import maybe_await
 from ..states import UploadState
+from ..config import get_settings
+
 
 router = Router()
 log = logging.getLogger(__name__)
-# Захардкоженные настройки (позже можно вынести в конфиг)
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+settings = get_settings()
 ALLOWED_EXTENSIONS = {".json", ".html", ".zip"}
 
 
 @router.message(F.document)
 async def handle_document(message: Message, state: FSMContext) -> None:
-    """Обработчик документов."""
     # Устанавливаем состояние, если его еще нет
     current_state = await state.get_state()
     if current_state is None:
@@ -32,21 +33,19 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.mime_type,
     )
 
-    # Проверка размера файла
-    if document.file_size and document.file_size > MAX_FILE_SIZE:
+    if document.file_size and document.file_size > settings.max_file_size_bytes:
         log.warning(
             "event=document_rejected reason=file_too_large user_id=%s file_name=%s file_size=%s limit=%s",
             message.from_user.id if message.from_user else None,
             document.file_name,
             document.file_size,
-            MAX_FILE_SIZE,
+            settings.max_file_size_bytes,
         )
         await message.answer(
-            f"❌ Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE / (1024 * 1024):.0f} MB"
+            f"❌ Файл слишком большой. Максимальный размер: {settings.max_file_size_bytes / (1024 * 1024):.0f} MB"
         )
         return
 
-    # Проверка расширения файла
     file_name = document.file_name or ""
     file_extension = None
     for ext in ALLOWED_EXTENSIONS:
@@ -73,12 +72,21 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.file_size,
     )
 
-
-    # Получаем текущий список файлов из состояния
     data = await state.get_data()
     files = data.get("files", [])
 
-    # Добавляем метаданные файла
+    if len(files) >= settings.max_files_per_user:
+        log.warning(
+            "event=document_rejected reason=max_files_exceeded user_id=%s current=%s limit=%s",
+            message.from_user.id if message.from_user else None,
+            len(files),
+            settings.max_files_per_user,
+        )
+        await maybe_await(message.answer(
+            f"❌ Можно отправить не более {settings.max_files_per_user} файлов за раз."
+        ))
+        return
+
     file_metadata = {
         "file_id": document.file_id,
         "file_name": file_name,
@@ -87,7 +95,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
     }
     files.append(file_metadata)
 
-    # Сохраняем обновленный список в состояние
     await state.update_data(files=files)
     log.info(
         "event=document_accepted user_id=%s file_name=%s queued=%s",
@@ -95,7 +102,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.file_name,
         len(files),
     )
-    # Отвечаем пользователю
     count = len(files)
     await message.answer(
         f"✅ Файл принят, сейчас в очереди {count} файл(ов). "
@@ -105,7 +111,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("reset"))
 async def cmd_reset(message: Message, state: FSMContext) -> None:
-    """Команда для очистки состояния и очереди файлов."""
     log.info(
         "cmd=/reset user_id=%s chat_id=%s",
         message.from_user.id if message.from_user else None,

@@ -1,12 +1,11 @@
-import pytest
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
-from aiogram.types import Message, User, Chat, Document
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.storage.base import StorageKey
+from unittest.mock import AsyncMock
 
-from bot.states import UploadState
+import pytest
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message, User, Chat, Document
 
 
 @pytest.fixture
@@ -116,4 +115,3 @@ def message_with_document(message, document_json):
     """Сообщение с документом."""
     object.__setattr__(message, 'document', document_json)
     return message
-
