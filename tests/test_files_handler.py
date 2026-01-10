@@ -1,7 +1,7 @@
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from aiogram.types import Message, Document
-from aiogram.fsm.context import FSMContext
+from aiogram.types import Document
 
 from bot.handlers.files import handle_document, cmd_reset, MAX_FILE_SIZE, ALLOWED_EXTENSIONS
 from bot.states import UploadState
@@ -262,4 +262,3 @@ class TestCmdReset:
 
         data = await fsm_context.get_data()
         assert not data or "files" not in data
-

@@ -1,11 +1,12 @@
-import pytest
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from bot.services.parser.telegram_json_parser import TelegramJsonParser
+import pytest
+
 from bot.models.export_result import ExportParseResult
+from bot.services.parser.telegram_json_parser import TelegramJsonParser
 
 
 # Мультизамена: mentioned_usernames -> usernames, проверка names
@@ -106,9 +107,9 @@ def test_parse_simple_message(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert isinstance(result, ExportParseResult)
         assert "testuser" in result.mentioned_usernames
         assert "valid_user" in result.mentioned_usernames
@@ -120,9 +121,9 @@ def test_parse_array_messages(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "username1" in result.mentioned_usernames
         assert "username2" in result.mentioned_usernames
 
@@ -133,9 +134,9 @@ def test_parse_complex_objects(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "another_user" in result.mentioned_usernames
         assert "yet_another" in result.mentioned_usernames
 
@@ -146,9 +147,9 @@ def test_parse_skips_empty_messages(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         # Не должно быть исключений
         assert isinstance(result, ExportParseResult)
 
@@ -159,9 +160,9 @@ def test_parse_invalid_usernames(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         # Короткие имена (@test, @u) не должны быть включены
         assert "test" not in result.mentioned_usernames
         assert "u" not in result.mentioned_usernames
@@ -180,14 +181,14 @@ def test_parse_lowercase_normalization(parser, sample_telegram_export):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "testuser" in result.mentioned_usernames
         assert "another_user" in result.mentioned_usernames
         # Исходные версии не должны быть добавлены отдельно
@@ -200,9 +201,9 @@ def test_parse_invalid_json(parser):
         json_path = Path(tmpdir) / "invalid.json"
         with json_path.open("w", encoding="utf-8") as f:
             f.write("{ invalid json")
-        
+
         result = parser.parse(json_path)
-        
+
         assert isinstance(result, ExportParseResult)
         assert len(result.mentioned_usernames) == 0
 
@@ -210,14 +211,14 @@ def test_parse_invalid_json(parser):
 def test_parse_missing_messages_field(parser):
     """Тест: парсер должен обрабатывать JSON без поля 'messages'."""
     export = {"name": "Test Chat", "type": "private"}
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert isinstance(result, ExportParseResult)
         assert len(result.mentioned_usernames) == 0
 
@@ -225,14 +226,14 @@ def test_parse_missing_messages_field(parser):
 def test_parse_messages_not_list(parser):
     """Тест: парсер должен обрабатывать случай, когда 'messages' не список."""
     export = {"name": "Test Chat", "messages": "not a list"}
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert isinstance(result, ExportParseResult)
         assert len(result.mentioned_usernames) == 0
 
@@ -240,9 +241,9 @@ def test_parse_messages_not_list(parser):
 def test_parse_file_not_found(parser):
     """Тест: парсер должен обрабатывать отсутствующий файл."""
     non_existent = Path("/tmp/non_existent_file_12345.json")
-    
+
     result = parser.parse(non_existent)
-    
+
     assert isinstance(result, ExportParseResult)
     assert len(result.mentioned_usernames) == 0
 
@@ -253,9 +254,9 @@ def test_parser_without_bot_copies_to_verified(parser, sample_telegram_export):
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(sample_telegram_export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert result.verified_usernames == result.mentioned_usernames
         assert len(result.verified_usernames) > 0
 
@@ -273,26 +274,26 @@ def test_parser_with_bot_verifies_users():
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         # Создаем мок-бот
         bot = AsyncMock()
-        
+
         # Мок: @testuser существует, @other_user нет
         async def mock_get_chat(username):
             if username == "@testuser":
                 return MagicMock()
             raise Exception(f"User {username} not found")
-        
+
         bot.get_chat = mock_get_chat
-        
+
         parser = TelegramJsonParser(bot=bot)
         result = parser.parse(json_path)
-        
+
         # Проверяем, что найдены оба пользователя в usernames
         assert "testuser" in result.mentioned_usernames
         assert "other_user" in result.mentioned_usernames
@@ -311,14 +312,14 @@ def test_multiple_mentions_same_user(parser, sample_telegram_export):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert result.mentioned_usernames == {"testuser"}
         assert len(result.mentioned_usernames) == 1
 
@@ -351,14 +352,14 @@ def test_parse_mixed_content(parser):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "user1" in result.mentioned_usernames
         assert "user2" in result.mentioned_usernames
         assert "user3" in result.mentioned_usernames
@@ -389,14 +390,14 @@ def test_extract_names_from_from_field(parser):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "Лев" in result.chat_names
         assert "Artyom" in result.chat_names
 
@@ -422,14 +423,14 @@ def test_skip_user_ids_from_from_field(parser):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         # user710927765 НЕ должно быть добавлено в names
         assert "user710927765" not in result.chat_names
         # Den должно быть добавлено
@@ -451,14 +452,14 @@ def test_extract_forwarded_from(parser):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         assert "Alice" in result.chat_names
         assert "Bob" in result.chat_names
 
@@ -477,14 +478,14 @@ def test_mentions_and_names_combined(parser):
             }
         ]
     }
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         json_path = Path(tmpdir) / "export.json"
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(export, f)
-        
+
         result = parser.parse(json_path)
-        
+
         # Имя должно быть в names
         assert "Иван" in result.chat_names
         # @mentions должны быть в usernames

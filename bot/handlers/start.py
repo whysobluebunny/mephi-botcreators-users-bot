@@ -1,8 +1,8 @@
 import logging
 
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
+from aiogram.types import Message
 
 router = Router()
 log = logging.getLogger(__name__)

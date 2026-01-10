@@ -1,9 +1,9 @@
 import logging
 
 from aiogram import Router, F
-from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 
 from ..states import UploadState
 
@@ -16,7 +16,6 @@ ALLOWED_EXTENSIONS = {".json", ".html", ".zip"}
 
 @router.message(F.document)
 async def handle_document(message: Message, state: FSMContext) -> None:
-    """Обработчик документов."""
     # Устанавливаем состояние, если его еще нет
     current_state = await state.get_state()
     if current_state is None:
@@ -32,7 +31,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.mime_type,
     )
 
-    # Проверка размера файла
     if document.file_size and document.file_size > MAX_FILE_SIZE:
         log.warning(
             "event=document_rejected reason=file_too_large user_id=%s file_name=%s file_size=%s limit=%s",
@@ -46,7 +44,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         )
         return
 
-    # Проверка расширения файла
     file_name = document.file_name or ""
     file_extension = None
     for ext in ALLOWED_EXTENSIONS:
@@ -73,12 +70,9 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.file_size,
     )
 
-
-    # Получаем текущий список файлов из состояния
     data = await state.get_data()
     files = data.get("files", [])
 
-    # Добавляем метаданные файла
     file_metadata = {
         "file_id": document.file_id,
         "file_name": file_name,
@@ -87,7 +81,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
     }
     files.append(file_metadata)
 
-    # Сохраняем обновленный список в состояние
     await state.update_data(files=files)
     log.info(
         "event=document_accepted user_id=%s file_name=%s queued=%s",
@@ -95,7 +88,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.file_name,
         len(files),
     )
-    # Отвечаем пользователю
     count = len(files)
     await message.answer(
         f"✅ Файл принят, сейчас в очереди {count} файл(ов). "
@@ -105,7 +97,6 @@ async def handle_document(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("reset"))
 async def cmd_reset(message: Message, state: FSMContext) -> None:
-    """Команда для очистки состояния и очереди файлов."""
     log.info(
         "cmd=/reset user_id=%s chat_id=%s",
         message.from_user.id if message.from_user else None,
