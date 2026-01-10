@@ -5,12 +5,14 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from .process import maybe_await
 from ..states import UploadState
+from ..config import get_settings
+
 
 router = Router()
 log = logging.getLogger(__name__)
-# Захардкоженные настройки (позже можно вынести в конфиг)
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+settings = get_settings()
 ALLOWED_EXTENSIONS = {".json", ".html", ".zip"}
 
 
@@ -31,16 +33,16 @@ async def handle_document(message: Message, state: FSMContext) -> None:
         document.mime_type,
     )
 
-    if document.file_size and document.file_size > MAX_FILE_SIZE:
+    if document.file_size and document.file_size > settings.max_file_size_bytes:
         log.warning(
             "event=document_rejected reason=file_too_large user_id=%s file_name=%s file_size=%s limit=%s",
             message.from_user.id if message.from_user else None,
             document.file_name,
             document.file_size,
-            MAX_FILE_SIZE,
+            settings.max_file_size_bytes,
         )
         await message.answer(
-            f"❌ Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE / (1024 * 1024):.0f} MB"
+            f"❌ Файл слишком большой. Максимальный размер: {settings.max_file_size_bytes / (1024 * 1024):.0f} MB"
         )
         return
 
@@ -72,6 +74,18 @@ async def handle_document(message: Message, state: FSMContext) -> None:
 
     data = await state.get_data()
     files = data.get("files", [])
+
+    if len(files) >= settings.max_files_per_user:
+        log.warning(
+            "event=document_rejected reason=max_files_exceeded user_id=%s current=%s limit=%s",
+            message.from_user.id if message.from_user else None,
+            len(files),
+            settings.max_files_per_user,
+        )
+        await maybe_await(message.answer(
+            f"❌ Можно отправить не более {settings.max_files_per_user} файлов за раз."
+        ))
+        return
 
     file_metadata = {
         "file_id": document.file_id,

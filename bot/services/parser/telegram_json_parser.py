@@ -12,9 +12,9 @@ from ...models.export_result import ExportParseResult
 
 # Regex для @username: должен быть в начале слова или после пробела
 MENTION_RE = re.compile(r"(?:^|[\s\(])@([a-zA-Z0-9_]{5,})")
-
 # Regex для исключения @user<числа> (ID вместо username)
 USER_ID_RE = re.compile(r"^user\d{7,}$")
+TME_RE = re.compile(r"(?:https?://)?t\.me/([a-zA-Z0-9_]{5,})")
 
 log = logging.getLogger(__name__)
 
@@ -50,11 +50,14 @@ class TelegramJsonParser(ChatExportParser):
 
             text = self._extract_text_from_message(msg)
             if text:
-                mentions = MENTION_RE.findall(text)
-                for mention in mentions:
+                for mention in MENTION_RE.findall(text):
                     # Исключаем @user<числа> (ID вместо username)
                     if not USER_ID_RE.match(mention.lower()):
                         result.mentioned_usernames.add(mention.lower())
+
+                for ch in TME_RE.findall(text):
+                    log.debug(f"Channel @{ch} extracted")
+                    result.channels.add(ch.lower())
             self._extract_names_from_message(msg, result)
 
         log.info(
@@ -122,8 +125,8 @@ class TelegramJsonParser(ChatExportParser):
             name = msg.get(field)
             if isinstance(name, str) and name.strip():
                 if USER_ID_RE.match(name):
-                    log.debug(f"Пропущен ID из поля '{field}': {name}")
+                    log.debug(f"Skipped ID from field '{field}': {name}")
                     continue
 
                 result.chat_names.add(name)
-                log.debug(f"Извлечено имя из поля '{field}': {name}")
+                log.debug(f"Extracted name from field '{field}': {name}")

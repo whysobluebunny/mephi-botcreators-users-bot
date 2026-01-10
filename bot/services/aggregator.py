@@ -49,6 +49,7 @@ class Aggregator:
     def parse_exports(self, paths: Iterable[Path]) -> ExportParseResult:
         all_usernames: set[str] = set()
         all_names: set[str] = set()
+        all_channels: set[str] = set()
 
         for path in paths:
             if isinstance(path, str):
@@ -67,9 +68,11 @@ class Aggregator:
                 result = parser.parse(path)
                 all_usernames.update(result.mentioned_usernames)
                 all_names.update(result.chat_names)
+                all_channels.update(result.channels)
                 logger.info(
                     f"Успешно обработан файл {path.name}: "
-                    f"найдено {len(result.mentioned_usernames)} usernames, {len(result.chat_names)} names"
+                    f"найдено {len(result.mentioned_usernames)} usernames, {len(result.chat_names)} names, "
+                    f"{len(result.channels)} channels"
                 )
             except Exception as e:
                 logger.error(
@@ -78,4 +81,4 @@ class Aggregator:
                 )
                 continue
 
-        return ExportParseResult(mentioned_usernames=all_usernames, chat_names=all_names)
+        return ExportParseResult(mentioned_usernames=all_usernames, chat_names=all_names, channels=all_channels)

@@ -52,7 +52,7 @@ async def test_process_files_text_response(message, fsm_context):
         # Mock Aggregator
         agg_instance = MockAggregator.return_value
         agg_instance.parse_exports.return_value = ExportParseResult(mentioned_usernames=["user1", "user2"],
-                                                                    chat_names=[])
+                                                                    chat_names=[], channels=[])
 
         await process_files(message, fsm_context)
 

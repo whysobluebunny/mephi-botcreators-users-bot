@@ -72,24 +72,26 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
             result = aggregator.parse_exports([str(p) for p in file_paths])
             mentions_count = len(result.mentioned_usernames)
             names_count = len(result.chat_names)
+            channels_count = len(result.channels)
             log.info(
-                "event=parsing_ok user_id=%s mentions_found=%d names_found=%d",
+                "event=parsing_ok user_id=%s mentions_found=%d names_found=%d channels_found=%d",
                 message.from_user.id if message.from_user else None,
                 mentions_count,
                 names_count,
+                channels_count,
             )
 
-            total = max(mentions_count, names_count)
+            total = max(mentions_count, names_count, channels_count)
             if total < 50:
-                if result.mentioned_usernames:
-                    text_list = "\n".join([f"@{u}" for u in sorted(result.mentioned_usernames)])
-                    text = f"📌 Найдено {mentions_count} @username:\n\n{text_list}"
+                if result.channels:
+                    text_list = "\n".join([f"@{u}" for u in sorted(result.channels)])
+                    text = f"✉️ Найдено {channels_count} каналов по t.me:\n\n{text_list}"
                     await maybe_await(message.answer(text))
 
                     log.info(
-                        "event=usernames_sent user_id=%s count=%d",
+                        "event=channels_sent user_id=%s count=%d",
                         message.from_user.id if message.from_user else None,
-                        mentions_count,
+                        channels_count,
                     )
 
                 if result.chat_names:
@@ -101,6 +103,17 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
                         "event=names_sent user_id=%s count=%d",
                         message.from_user.id if message.from_user else None,
                         names_count,
+                    )
+
+                if result.mentioned_usernames:
+                    text_list = "\n".join([f"@{u}" for u in sorted(result.mentioned_usernames)])
+                    text = f"📌 Найдено {mentions_count} @username:\n\n{text_list}"
+                    await maybe_await(message.answer(text))
+
+                    log.info(
+                        "event=usernames_sent user_id=%s count=%d",
+                        message.from_user.id if message.from_user else None,
+                        mentions_count,
                     )
 
                 if not result.mentioned_usernames and not result.chat_names:
@@ -122,7 +135,7 @@ async def process_files(message: types.Message, state: FSMContext) -> None:
                 input_file = FSInputFile(excel_path)
                 await maybe_await(message.answer_document(
                     input_file,
-                    caption=f"📊 Найдено {mentions_count} пользователей. Список во вложении."
+                    caption=f"📊 Найдено {mentions_count} упоминаний, {names_count} имён пользователей, {channels_count} каналов. Список во вложении."
                 ))
 
                 log.info(

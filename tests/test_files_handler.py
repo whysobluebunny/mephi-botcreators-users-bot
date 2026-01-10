@@ -3,8 +3,9 @@ from unittest.mock import AsyncMock
 import pytest
 from aiogram.types import Document
 
-from bot.handlers.files import handle_document, cmd_reset, MAX_FILE_SIZE, ALLOWED_EXTENSIONS
+from bot.handlers.files import handle_document, cmd_reset, ALLOWED_EXTENSIONS
 from bot.states import UploadState
+from bot.config import get_settings
 
 
 class TestHandleDocument:
@@ -100,7 +101,7 @@ class TestHandleDocument:
         message.answer.assert_called_once()
         call_args = message.answer.call_args[0][0]
         assert "❌ Файл слишком большой" in call_args
-        assert f"{MAX_FILE_SIZE / (1024 * 1024):.0f} MB" in call_args
+        assert f"{get_settings().max_file_size_bytes / (1024 * 1024):.0f} MB" in call_args
 
     @pytest.mark.asyncio
     async def test_handle_document_invalid_extension(self, message, document_invalid_extension, fsm_context):

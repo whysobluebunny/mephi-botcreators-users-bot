@@ -10,3 +10,5 @@ class ExportParseResult(BaseModel):
     verified_usernames: Set[str] = set()
     # Имена из полей 'from', 'forwarded_from' и т.д. (Иван, Лев, Artyom и т.д.)
     chat_names: Set[str] = set()
+    # Каналы распознанные по t.me/
+    channels: Set[str] = set()
