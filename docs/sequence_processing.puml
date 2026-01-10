@@ -1,0 +1,75 @@
+@startuml
+title Обработка экспортов: загрузка файлов → /process → результат
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 120
+
+actor User as U
+participant "Telegram Bot API" as TG
+participant "Aiogram Dispatcher" as DP
+participant "files.py\nhandle_document" as HFiles
+participant "FSM MemoryStorage" as FSM
+participant "process.py\n/process" as HProc
+participant "FileDownloader" as Down
+participant "Temp FS\n(TemporaryDirectory)" as FS
+participant "Aggregator" as Agg
+participant "TelegramJsonParser" as Parser
+participant "ExcelExporter" as Xlsx
+
+== Загрузка документов ==
+U -> TG : SendDocument(result.json / .html / .zip)
+TG -> DP : Update(message.document)
+DP -> HFiles : handle_document(message, state)
+
+HFiles -> HFiles : validate size/extension\n(max_file_size, allowed_ext)
+alt файл слишком большой/неподдерживаемый
+  HFiles -> TG : answer("❌ ...")
+else ok
+  HFiles -> FSM : get_data()
+  HFiles -> FSM : update_data(files += file_metadata)
+  HFiles -> TG : answer("✅ Файл принят...\nИспользуйте /process")
+end
+
+== Запуск обработки ==
+U -> TG : /process
+TG -> DP : Update(command)
+DP -> HProc : process_files(message, state)
+
+HProc -> FSM : get_data() -> files[]
+alt files пуст
+  HProc -> TG : answer("⚠️ Нет файлов для обработки...")
+  return
+end
+
+HProc -> TG : answer("⏳ Начинаю обработку...")\n(status message)
+
+HProc -> FS : create TemporaryDirectory()
+
+loop for each file in files[]
+  HProc -> Down : download_files(bot, file_id, dest)
+  Down -> TG : bot.download(file_id)
+  TG --> Down : bytes/stream
+  Down -> FS : write file to disk
+end
+
+HProc -> Agg : parse_exports(paths)
+Agg -> Parser : parse(path)
+Parser --> Agg : ExportParseResult\n(usernames/names/channels)
+Agg --> HProc : merged ExportParseResult
+
+alt total < 50
+  HProc -> TG : answer(list of channels)\n(optional)
+  HProc -> TG : answer(list of display names)\n(optional)
+  HProc -> TG : answer(list of @username)\n(optional)
+else total >= 50
+  HProc -> Xlsx : build_excel(result, excel_path)
+  Xlsx -> FS : write .xlsx
+  HProc -> TG : answer_document(.xlsx,\ncaption with counts)
+end
+
+HProc -> FSM : clear()
+HProc -> TG : delete(status message) (если доступно)
+
+@enduml

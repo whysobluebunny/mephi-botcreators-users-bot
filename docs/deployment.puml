@@ -1,0 +1,33 @@
+@startuml
+title Развёртывание (упрощённо)
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+
+node "User Device" as userdev {
+  actor "Пользователь\n(Telegram App)" as user
+}
+
+cloud "Telegram Cloud" as tg {
+  [Telegram Bot API] as api
+}
+
+node "Host (Linux/VM)" as host {
+  node "Docker Container: bot" as cont {
+    [Python 3 + aiogram\nmephi-botcreators-users-bot] as app
+    artifact "Temp files\n(/tmp inside container)" as tmp
+  }
+}
+
+user --> api : сообщения/документы
+api <--> app : HTTPS long polling\ngetUpdates/sendMessage/getFile/download
+app --> tmp : временное хранение\nэкспортов и xlsx
+
+note bottom of cont
+  Переменные окружения:
+  • BOT_TOKEN
+  • ENV (опционально)
+  • MAX_FILE_SIZE_BYTES, MAX_FILES_PER_USER (через config)
+end note
+
+@enduml

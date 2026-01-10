@@ -1,0 +1,73 @@
+@startuml
+title mephi-botcreators-users-bot — компонентная архитектура
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam wrapWidth 220
+skinparam maxMessageSize 120
+
+actor "Пользователь\n(Telegram клиент)" as user
+
+cloud "Telegram Cloud" as tgcloud {
+  [Telegram Bot API] as tgapi
+}
+
+rectangle "Bot Runtime (Python + aiogram)\nодин процесс/контейнер" as botrt {
+  [Aiogram Dispatcher\n+ Routers] as dispatcher
+
+  package "Handlers" as handlers {
+    [start.py\n(/start, /help)] as h_start
+    [files.py\n(приём документов,\n/reset)] as h_files
+    [process.py\n(/process)] as h_process
+    [status.py\n(/status)] as h_status
+  }
+
+  [FSM Storage\nMemoryStorage] as fsm
+
+  package "Services" as services {
+    [FileDownloader\n(download_files)] as s_down
+    [Aggregator\n(parse_exports)] as s_aggr
+    [ExcelExporter\n(build_excel)] as s_xlsx
+  }
+
+  package "Parsers" as parsers {
+    [TelegramJsonParser\n(.json)] as p_json
+    note right of parsers
+      Сейчас по умолчанию подключён
+      TelegramJsonParser (.json).
+      Расширение под другие форматы
+      возможно через новые Parser'ы.
+    end note
+  }
+
+  database "Temp FS\n(tempfile.TemporaryDirectory)" as tmpfs
+}
+
+user --> tgapi : отправляет документ\n(JSON/HTML/ZIP)
+tgapi --> dispatcher : Update (message/document)
+dispatcher --> handlers : маршрутизация по Router'ам
+
+handlers --> fsm : хранение очереди файлов\n(files[])
+h_files --> fsm : update_data(files)\n/ clear() на /reset
+
+h_process --> s_down : скачать файлы\nпо file_id
+s_down --> tgapi : bot.download(file_id)
+s_down --> tmpfs : сохранить файлы\nв temp dir
+
+h_process --> s_aggr : parse_exports(paths)
+s_aggr --> p_json : parse(path)\n(выделение @username,\nимён, t.me/каналов)
+
+h_process --> s_xlsx : build_excel(result)\n(если данных много)
+s_xlsx --> tmpfs : сохранить .xlsx
+
+h_process --> tgapi : message.answer(...)\nили answer_document(.xlsx)
+h_process --> fsm : clear() после успеха
+
+note bottom of botrt
+  Ключевые свойства:
+  • Нет постоянной БД — всё обрабатывается "на лету".
+  • Временные файлы — в каталоге TemporaryDirectory.
+  • Состояние пользователя — в MemoryStorage (теряется при рестарте).
+end note
+
+@enduml

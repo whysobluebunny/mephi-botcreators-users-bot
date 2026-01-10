@@ -2,3 +2,8 @@ aiogram==3.13.1
 pydantic==2.9.2
 openpyxl==3.1.5
 python-dotenv==1.0.1
+
+# Testing dependencies
+pytest==8.3.4
+pytest-asyncio==0.24.0
+openpyxl
